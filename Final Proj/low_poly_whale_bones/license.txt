@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low Poly Whale Bones
+* source:	https://sketchfab.com/3d-models/low-poly-whale-bones-3f7eb8f492fd4be19796a18c27113653
+* author:	cloclo (https://sketchfab.com/cloclo)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low Poly Whale Bones" (https://sketchfab.com/3d-models/low-poly-whale-bones-3f7eb8f492fd4be19796a18c27113653) by cloclo (https://sketchfab.com/cloclo) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
