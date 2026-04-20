@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import {whaleShader, ironShader, basicBufferShader} from './shaders.js';
-
+import {whaleShader, ironShader, basicBufferShader, floorCausticsShader} from './shaders.js';
+import {depthShader} from './shaders.js';
 
 // GLOBAL SCENE VARIABLEs
 let scene, camera, controls, renderer;
@@ -63,6 +63,10 @@ function initScene() {
     let ambient = new THREE.AmbientLight(0xFF0000, 1.0);
     // scene.add(ambient);
 
+    createSun();
+    createFloor();
+    loadModel();
+
     if (lung) {
         quad = new THREE.Mesh(postBuffGeom, ironShader);
         whaleShader.uniforms.mode.value = 1;
@@ -70,14 +74,15 @@ function initScene() {
         ironShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
         postScene.add(quad);
     } else {
+        // quad = new THREE.Mesh(postBuffGeom, depthShader);
+        // floor.material = floorCausticsShader;
+        depthShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+        floorCausticsShader.uniforms.u_LightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
         quad = new THREE.Mesh(postBuffGeom, basicBufferShader);
         basicBufferShader.uniforms.t_Diffuse.value = renderTarget.texture;
         postScene.add(quad);
     }
 
-    createSun();
-    createFloor();
-    loadModel();
     animate();
 
 } //initScene
@@ -93,6 +98,8 @@ function loadModel() {
             if (child.isMesh) {
                 child.material.side = THREE.DoubleSide;
                 child.material = whaleShader;
+                // child.material = depthShader;
+
                 child.material.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
                 child.material.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
             }
@@ -109,15 +116,19 @@ function createSun() {
     const sunMat = new THREE.MeshBasicMaterial({ color: '#ffd129'});
     sun = new THREE.Mesh(sunGeom, sunMat);
 
-    sun.position.set(50, 5, 10);
-    sunWorldPos = new THREE.Vector3(50, 5, 10);
+    // sun.position.set(50, 5, 10);
+    // sunWorldPos = new THREE.Vector3(50, 5, 10);
+    sun.position.set(0, 50, 10);
+    sunWorldPos = new THREE.Vector3(0, 50, 10);
     scene.add(sun);
 }
 
 function createFloor() {
     const floorGeom = new THREE.PlaneGeometry(200, 200);
     let floorMat = new THREE.MeshBasicMaterial({color: '#aba79d', side: THREE.DoubleSide});
-    floor = new THREE.Mesh(floorGeom, floorMat);
+    // floor = new THREE.Mesh(floorGeom, floorMat);
+    floor = new THREE.Mesh(floorGeom, depthShader);
+
 
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 3.5;
@@ -128,6 +139,8 @@ function animate() {
     const time = clock.getElapsedTime();
 
     ironShader.uniforms.u_Time.value = time;
+    depthShader.uniforms.u_Time.value = time;
+    floorCausticsShader.uniforms.u_Time.value = time;
 
     controls.update();
 
