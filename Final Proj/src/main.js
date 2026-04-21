@@ -7,7 +7,7 @@ import {depthShader} from './shaders.js';
 // GLOBAL SCENE VARIABLEs
 let scene, camera, controls, renderer;
 let postScene, renderTarget, postCam, postBuffGeom, quad;
-let sun, sunWorldPos, floor;
+let sun, sunWorldPos, floor, floorGeom;
 let loader;
 const clock = new THREE.Clock();
 
@@ -76,7 +76,7 @@ function initScene() {
     } else {
         // quad = new THREE.Mesh(postBuffGeom, depthShader);
         // floor.material = floorCausticsShader;
-        depthShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+        depthShader.uniforms.u_Resolution.value = new THREE.Vector2(floorGeom.parameters.width, floorGeom.parameters.height);
         floorCausticsShader.uniforms.u_LightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
         quad = new THREE.Mesh(postBuffGeom, basicBufferShader);
         basicBufferShader.uniforms.t_Diffuse.value = renderTarget.texture;
@@ -124,7 +124,7 @@ function createSun() {
 }
 
 function createFloor() {
-    const floorGeom = new THREE.PlaneGeometry(200, 200);
+    floorGeom = new THREE.PlaneGeometry(200, 200);
     let floorMat = new THREE.MeshBasicMaterial({color: '#aba79d', side: THREE.DoubleSide});
     // floor = new THREE.Mesh(floorGeom, floorMat);
     floor = new THREE.Mesh(floorGeom, depthShader);

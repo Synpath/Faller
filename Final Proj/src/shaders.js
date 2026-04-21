@@ -228,11 +228,12 @@ const floorFrag = `
 const depthVertex = `
     varying vec4 vWorldPosition;
     varying float depth;
+    varying vec4 projection;
     
     void main() {
-        vWorldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = modelMatrix * vec4(position, 1.0); //model * local
         
-        vec4 projection = projectionMatrix * viewMatrix * vWorldPosition;
+        projection = projectionMatrix * viewMatrix * vWorldPosition; // clip = proj * view * (model * local)
         depth = projection.z;
         
         gl_Position = projection;
@@ -242,6 +243,8 @@ const depthVertex = `
 const depthFrag = `
     uniform vec2 u_Resolution;
     uniform float u_Time;
+    varying vec4 projection;
+    varying vec4 vWorldPosition;
 
     vec2 random2(vec2 p) {
         return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453);
@@ -249,15 +252,16 @@ const depthFrag = `
     
     void main() {
         
-        vec2 st = gl_FragCoord.xy / u_Resolution.xy;
-        st.x *= u_Resolution.x / u_Resolution.y;
-        vec3 color = vec3(0.0, 0.3, 0.8);
+        // vec2 st = gl_FragCoord.xy / u_Resolution.xy;
+        vec2 st = vWorldPosition.xz / u_Resolution.xy;
+        vec3 color = vec3(0.0, 0.5, 0.8);
         
-        st *= 10.0;
+        // vec3 color = vec3(0.0, 0.0, 0.0);
+        st *= 5.0;
         
         vec2 i_st = floor(st);
         vec2 f_st = fract(st);
-        float m_dist = 1.0;
+        float m_dist = 1.0; //minimum distance from the chosen point
         
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
@@ -265,13 +269,16 @@ const depthFrag = `
                 vec2 point = random2(i_st + neighbor);
                 
                 point = 0.5 + 0.5 * sin(u_Time + 6.2831 * point);
-                vec2 diff = neighbor + point - f_st;
-                float dist = length(diff) - 0.6;
+                vec2 diff = neighbor + point - f_st; // vector between the pixel and the point
+                float dist = length(diff);  // distance to the point
                 m_dist = min(m_dist, dist);
             }
         }
         
-        color += m_dist * 0.6;
+        color += smoothstep(0.0, 1.8, m_dist);
+        // color.r += m_dist * 0.3;
+        // color.r += step(0.98, f_st.x);
+        // color.g += step(0.98, f_st.y);
         
         gl_FragColor = vec4(color, 1.0);
     }
