@@ -50,7 +50,6 @@ const whaleFrag = `
     void main() {
     
         vec2 uv = gl_FragCoord.xy / u_Resolution; // normalize uv coords
-        
         vec3 normal = normalize(vNormal);
         vec3 lightDir;
         vec3 viewDir;
@@ -252,13 +251,12 @@ const depthFrag = `
     
     float voronoiCaustic(vec2 st) {
         
-        st += 0.15 * vec2(sin(st.y * 0.4 + u_Time), cos(st.x * 3.0 + u_Time));
+        st += 0.15 * vec2(sin(st.y * 0.8 + u_Time * 0.04), cos(st.x * 3.0 + u_Time * 0.8));
         st *= 6.0;
         vec2 i_st = floor(st);
         vec2 f_st = fract(st);
         float m_dist = 1.0; //minimum distance from the chosen point
         float m_dist2 = 0.7;
-        
         
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
@@ -279,9 +277,7 @@ const depthFrag = `
         }
         float edge = m_dist2 - m_dist;
         float caustic = 1.0 - smoothstep(0.0, 0.08, edge);
-        // vec3 causticColor = vec3(0.8, 0.95, 1.0);
         caustic = pow(caustic, 2.0);
-        // causticColor *= caustic;
         
         return caustic;
     }
