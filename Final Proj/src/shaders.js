@@ -5,6 +5,8 @@ import * as THREE from 'three';
 // bufferVertex: get uv coords of the texture in the buffer we rendered to in the first pass
 // basicBufferFrag: only to keep 2-pass pipeline consistent with all modes, displays the base scene as if rendered using 1 pass
 // ironFrag: post-processing effects for iron lung mode, treats the first render pass as a flat image and shades it accordingly
+// causticsVertex: coordinates for caustics
+// causticsFrag: procedural caustics shader using Voronoi cellular noise
 
 const whaleVertex = `
     varying vec3 vNormal;
@@ -173,58 +175,7 @@ const ironFrag = `
     }
 `;
 
-const floorVertex = `
-    varying vec3 vWorldPosition;
-    
-    void main() {
-        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-        gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPosition, 1.0);
-    }
-`;
-
-const floorFrag = `
-    uniform float u_Time;
-    uniform vec3 u_LightPos;
-    
-    varying vec3 vWorldPosition;
-    
-    vec2 getCausticUV(vec3 worldPos) {
-        vec2 uv = worldPos.xz * 0.03;
-        
-        uv += vec2(
-            sin(uv.y * 4.0 + u_Time * 1.5),
-            cos(uv.x * 4.0 + u_Time * 1.2)) * 0.1;
-        
-        return uv;
-    }
-    
-    float caustic(vec2 uv) {
-        float c = sin(uv.x * 10.0 + u_Time) * cos(uv.y * 10.0 - u_Time);
-        return pow(abs(c), 5.0);
-    }
-    
-    float lightFalloff(vec3 worldPos) {
-        float dist = length(worldPos - u_LightPos);
-        return 1.0 / (1.0 + dist * 0.5);
-    }
-    
-    void main() {
-       vec2 uv = getCausticUV(vWorldPosition) + sin(u_Time * 0.7) * 0.05;
-       float c = caustic(uv) + caustic(uv * 1.7) * 0.5 + caustic(uv * 2.3) * 0.25;
-       float falloff = lightFalloff(vWorldPosition);
-       // vec3  color = vec3(1.0, 0.95, 0.8);
-       vec3  color = vec3(1.0, 1.0, 1.0);
-       float depthFade = exp(-vWorldPosition.y * 0.03);
-       vec3 baseColor = vec3(0.67, 0.65, 0.61);
-        
-       vec3 finalCaustics = baseColor + color * c * falloff * 2.0;
-       finalCaustics *= depthFade;
-       
-       gl_FragColor = vec4(finalCaustics, 1.0);
-    }
-`;
-
-const depthVertex = `
+const causticsVertex = `
     varying vec4 vWorldPosition;
     varying float depth;
     varying vec4 projection;
@@ -239,7 +190,7 @@ const depthVertex = `
     }
 `;
 
-const depthFrag = `
+const causticsFrag = `
     uniform vec2 u_Resolution;
     uniform float u_Time;
     varying vec4 projection;
@@ -252,7 +203,7 @@ const depthFrag = `
     float voronoiCaustic(vec2 st) {
         
         st += 0.15 * vec2(sin(st.y * 0.8 + u_Time * 0.04), cos(st.x * 3.0 + u_Time * 0.8));
-        st *= 6.0;
+        st *= 8.0;
         vec2 i_st = floor(st);
         vec2 f_st = fract(st);
         float m_dist = 1.0; //minimum distance from the chosen point
@@ -312,6 +263,71 @@ const depthFrag = `
     }
 `;
 
+const furVertex = `
+    uniform float u_shellIndex;
+    uniform float u_shellCount;
+    varying float normShellHeight;
+    varying vec2 vUV;
+    
+    void main() {
+    
+        vec3 vertexNormal = normalize(normalMatrix * normal);
+        vec4 pos = vec4(position, 1.0);
+         
+        normShellHeight = u_shellIndex / u_shellCount;
+        float height = pow(normShellHeight, 2.0);
+        vUV = uv;
+
+        pos.xyz += vertexNormal * 1.5 * height;
+        
+        vec4 worldPos = modelMatrix * pos;        
+        vec4 projection = projectionMatrix * viewMatrix * worldPos;
+
+        
+        gl_Position = projection;
+    }
+`;
+
+const furFrag = `
+    varying vec2 vUV;
+    varying float normShellHeight;
+    uniform float u_shellIndex;
+    ivec2 tid;
+    
+    float hash(int n) {
+        // integer hash copied from Hugo Elias
+        n = (n << 13) ^ n;
+        n = n * (n * n * int(15731u + 0x789221u)) + int(0x131258u);
+        return float(n & int(0x7fffffu)) / float(0x7fffff);
+    }
+    
+    void main() {
+        vec3 color = vec3(0.44, 0.26, 0.63);
+    
+        vec2 newUV = vUV * 201.0;
+        vec2 localUV = fract(newUV) * 2.0 - 1.0;
+        float localDistFromCenter = length(localUV);
+        
+        tid.x = int(newUV.x);
+        tid.y = int(newUV.y);
+        int seed = tid.x + 100 * tid.y * 100 * 10;
+        float rand = mix(0.0, 2.0, hash(seed));
+        float outsideThickness = 0.0;
+        
+        if (localDistFromCenter > (1.0 * (rand - normShellHeight))) {
+            outsideThickness = 1.0;
+        }
+
+        if (outsideThickness > 0.0 && u_shellIndex > 0.0) {
+            discard;
+            // color = vec3(1.0, 1.0, 1.0);
+        }
+                
+        color = vec3(1.0, 1.0, 1.0);
+        gl_FragColor = vec4(color, 1.0);
+    }
+`;
+
 // SHADER FOR BASIC LIGHTING ON THE WHALE SKELETON + DITHERING/CONTRAST FOR IRON LUNG MODE
 const whaleShader = new THREE.ShaderMaterial({
     uniforms: {
@@ -343,23 +359,23 @@ const basicBufferShader = new THREE.ShaderMaterial({
     fragmentShader: basicBufferFrag
 });
 
-const floorCausticsShader = new THREE.ShaderMaterial({
-    uniforms: {
-        u_Time: { value: null },
-        u_LightPos: { value: new THREE.Vector3() },
-    },
-    vertexShader: floorVertex,
-    fragmentShader: floorFrag
-})
-
-const depthShader = new THREE.ShaderMaterial({
+const causticsShader = new THREE.ShaderMaterial({
     uniforms: {
         u_Resolution: { value: null },
         u_Time: { value: 0 },
     },
-    vertexShader: depthVertex,
-    fragmentShader: depthFrag
+    vertexShader: causticsVertex,
+    fragmentShader: causticsFrag
 })
 
-export {whaleShader, ironShader, basicBufferShader, floorCausticsShader}
-export {depthShader}
+const furShader = new THREE.ShaderMaterial({
+    uniforms: {
+        u_shellIndex: { value: 0.0 },
+        u_shellCount: { value: 0.0},
+    },
+    vertexShader: furVertex,
+    fragmentShader: furFrag,
+})
+
+export {whaleShader, ironShader, basicBufferShader, causticsShader}
+export {furShader}
