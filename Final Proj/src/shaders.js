@@ -138,8 +138,8 @@ const ironFrag = `
     
     vec3 scanLineIntensity(float uv, float resolution, float opacity)
     {
-        // float intensity = sin(uv * resolution * PI * 2.0); // 2.0 is the wavelength
-        float intensity = sin(uv * resolution * PI * 0.17);
+        // float intensity = sin(uv * resolution * PI * 2.5); // 2.0 is the wavelength
+        float intensity = sin(uv * resolution * PI * 0.1);
 
         intensity = ((0.5 * intensity) + 0.5) * 0.9 + 0.1;
         return vec3(vec2(pow(intensity, opacity)), 1.0);
@@ -155,22 +155,21 @@ const ironFrag = `
         vec2 uv = gl_FragCoord.xy / u_Resolution; // normalize uv coords
         float luminance = 0.0;
         
-        // CRT SCANLINE EFFECT + VIGNETTE
-        color *= vignetteIntensity(vUv, u_Resolution, 0.4, vignetteRoundness);
-        color *= scanLineIntensity(vUv.x, u_Resolution.x, 0.2); //0.1 is opacity
-        
         // FILM GRAIN
         float g = grain(uv) - 0.5;
         luminance = dot(color, weight);
         luminance += g * grainStrength;
 
         color = vec3(luminance);
+
+        // CRT SCANLINE EFFECT + VIGNETTE
+        color *= vignetteIntensity(vUv, u_Resolution, 0.6, vignetteRoundness);                
+        color /= scanLineIntensity(vUv.x, u_Resolution.x, 0.4); //0.2 is opacity
         
         // TINTING
         color.z *= 3.5;
         color.y *= 1.3;
-        color *= 1.5;
-        
+        color *= 1.5; //1.5?
         gl_FragColor = vec4(color, 1.0);
     }
 `;
@@ -193,6 +192,7 @@ const causticsVertex = `
 const causticsFrag = `
     uniform vec2 u_Resolution;
     uniform float u_Time;
+    uniform vec3 u_ObjectColor;
     varying vec4 projection;
     varying vec4 vWorldPosition;
 
@@ -235,9 +235,9 @@ const causticsFrag = `
     
     void main() {
         
-        // vec2 st = gl_FragCoord.xy / u_Resolution.xy;
         vec2 st = vWorldPosition.xz / u_Resolution.xy;
-        vec3 color = vec3(0.0, 0.5, 0.8);
+        // vec3 color = vec3(0.0, 0.5, 0.8);
+        vec3 color = u_ObjectColor;
         
         vec2 aberration = 0.01 * vec2(
             sin(u_Time * 0.5),
@@ -257,7 +257,7 @@ const causticsFrag = `
         vec3 finalCaustic = vec3(c1, c2, c3);
         vec3 waterTint = vec3(0.0, 0.4, 0.7);
         
-        color = waterTint + finalCaustic;
+        color += finalCaustic * (waterTint * 1.2);
        
         gl_FragColor = vec4(color, 1.0);
     }
@@ -282,7 +282,6 @@ const furVertex = `
         
         vec4 worldPos = modelMatrix * pos;        
         vec4 projection = projectionMatrix * viewMatrix * worldPos;
-
         
         gl_Position = projection;
     }
@@ -363,6 +362,7 @@ const causticsShader = new THREE.ShaderMaterial({
     uniforms: {
         u_Resolution: { value: null },
         u_Time: { value: 0 },
+        u_ObjectColor: { value: null },
     },
     vertexShader: causticsVertex,
     fragmentShader: causticsFrag

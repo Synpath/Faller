@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import GUI from 'lil-gui';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {whaleShader, ironShader, basicBufferShader, causticsShader} from './shaders.js';
@@ -7,20 +8,24 @@ import {LSystem} from './L-system.js';
 
 // GLOBAL SCENE VARIABLEs
 let scene, camera, controls, renderer;
-let postScene, renderTarget, postCam, postBuffGeom, quad;
-let sun, sunWorldPos, floor, floorGeom;
-let loader;
+let postScene, renderTarget, postCam, postBuffGeom;
+let sun, sunWorldPos, floor, floorGeom, defaultFloor;
+let loader, root;
+let gui;
+let quads = {};
+
+const globalUniforms = {
+    u_Time: {value: 0},
+    u_Resolution: {value: null},
+};
+
 const clock = new THREE.Clock();
-
-// GLOBAL SCENE VARS: MODES
-let lung = false;
-// let lung = true;
-
-let shallows = false;
-// let shallows = true;
-
-// let abyssal = false;
-let abyssal = true;
+const MODES = {
+    LUNG: 'Iron Lung',
+    SHALLOWS: 'Shallow Water',
+    ABYSSAL: 'Abyssal Zone',
+};
+let currentMode = MODES.SHALLOWS;
 
 function initScene() {
     // SCENE -----------
@@ -34,7 +39,7 @@ function initScene() {
         0.1,
         2000
     );
-    camera.position.set(50, 30, 0);
+    camera.position.set(100, 30, 0);
 
     // RENDERER (main scene) --------------------
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -67,29 +72,9 @@ function initScene() {
     createSun();
     createFloor();
     loadModel();
-    createFur();
-
-    if (lung) {
-        quad = new THREE.Mesh(postBuffGeom, ironShader);
-        whaleShader.uniforms.mode.value = 1;
-        ironShader.uniforms.t_Diffuse.value = renderTarget.texture;
-        ironShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
-
-        postScene.add(quad);
-    } else if (shallows) {
-        scene.background = new THREE.Color(0x6b87bf);
-
-        floor.material = causticsShader;
-        causticsShader.uniforms.u_Resolution.value = new THREE.Vector2(floorGeom.parameters.width, floorGeom.parameters.height);
-
-        quad = new THREE.Mesh(postBuffGeom, basicBufferShader);
-        basicBufferShader.uniforms.t_Diffuse.value = renderTarget.texture;
-        postScene.add(quad);
-    } else if (abyssal) {
-        quad = new THREE.Mesh(postBuffGeom, basicBufferShader);
-        basicBufferShader.uniforms.t_Diffuse.value = renderTarget.texture;
-        postScene.add(quad);
-    }
+    initPost();
+    setupGUI();
+    updateMode();
 
     animate();
 
@@ -99,22 +84,14 @@ function loadModel() {
     // Load model
     loader = new GLTFLoader();
     loader.load('./low_poly_whale_bones/scene.gltf', function(gltf) {
-        const root = gltf.scene;
+        root = gltf.scene;
         root.scale.multiplyScalar(0.3);
 
         root.traverse((child, i) => {
             if (child.isMesh) {
                 child.material.side = THREE.DoubleSide;
 
-                if (lung) {
-                    child.material = whaleShader;
-                } else if (shallows) {
-                    child.material = causticsShader;
-                }
-
-                // set these uniforms here because they do basic shading
-                whaleShader.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
-                whaleShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+                updateModel();
             }
         });
 
@@ -186,12 +163,109 @@ function createFur() {
 
 function createFloor() {
     floorGeom = new THREE.PlaneGeometry(1000, 1000);
-    let floorMat = new THREE.MeshBasicMaterial({color: '#aba79d', side: THREE.DoubleSide});
+    // let floorMat = new THREE.MeshBasicMaterial({color: '#aba79d', side: THREE.DoubleSide});
+    let floorMat = new THREE.MeshBasicMaterial({ color: '#694637', side: THREE.DoubleSide});
+    defaultFloor = floorMat;
     floor = new THREE.Mesh(floorGeom, floorMat);
+    globalUniforms.u_Resolution.value = new THREE.Vector2(floorGeom.parameters.width, floorGeom.parameters.height);
 
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 11;
     scene.add(floor);
+}
+
+function setupGUI() {
+    gui = new GUI({ container: document.getElementById('gui-container') });
+
+    gui.add({mode: currentMode}, 'mode', Object.values(MODES))
+        .name('Mode Selector').onChange(v => {
+            currentMode = v;
+            updateMode();
+            updateModel();
+    });
+}
+
+function updateMode() {
+    Object.values(quads).forEach(q => q.visible = false);
+
+    switch (currentMode) {
+        case MODES.LUNG:
+            floor.material = defaultFloor;
+            quads.lung.visible = true;
+            whaleShader.uniforms.mode.value = 1;
+            scene.background = new THREE.Color(0x1b2743);
+            break;
+
+        case MODES.SHALLOWS:
+            quads.shallow.visible = true;
+
+            floor.material = createCaustics(0x694637);
+            scene.background = new THREE.Color(0x6b87bf);
+            break;
+
+        case MODES.ABYSSAL:
+            floor.material = defaultFloor;
+            whaleShader.uniforms.mode.value = 0;
+            quads.abyssal.visible = true;
+            break;
+    }
+}
+
+function updateModel() {
+    if (!root) return;
+
+    root.traverse((child) => {
+        if (!child.isMesh) return;
+
+        switch(currentMode) {
+            case MODES.LUNG:
+                child.material = whaleShader;
+                break;
+            case MODES.SHALLOWS:
+                child.material = createCaustics(0xff00ff);
+                break;
+            case MODES.ABYSSAL:
+                child.material = whaleShader;
+                break;
+        }
+
+    });
+
+    // set these uniforms here because they do basic shading
+    whaleShader.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
+    whaleShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+}
+
+function initPost() {
+    quads.lung = new THREE.Mesh(postBuffGeom, ironShader);
+    quads.shallow = new THREE.Mesh(postBuffGeom, basicBufferShader);
+    quads.abyssal = new THREE.Mesh(postBuffGeom, basicBufferShader);
+
+    // pass in rendertarget texture
+    ironShader.uniforms.t_Diffuse.value = renderTarget.texture;
+    basicBufferShader.uniforms.t_Diffuse.value = renderTarget.texture;
+
+    ironShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+
+    Object.values(quads).forEach(v => {
+        v.visible = false;
+        postScene.add(v);
+    });
+}
+
+function createCaustics(color) {
+    const uniforms = {
+        u_Time: globalUniforms.u_Time,
+        u_Resolution: globalUniforms.u_Resolution,
+        u_ObjectColor: {value: new THREE.Color(color)}
+    };
+
+    const mat = new THREE.ShaderMaterial({
+        vertexShader: causticsShader.vertexShader,
+        fragmentShader: causticsShader.fragmentShader,
+        uniforms: uniforms
+    });
+    return mat;
 }
 
 function animate() {
@@ -199,6 +273,7 @@ function animate() {
 
     ironShader.uniforms.u_Time.value = time;
     causticsShader.uniforms.u_Time.value = time;
+    globalUniforms.u_Time.value = time;
 
     controls.update();
 
@@ -212,7 +287,6 @@ function animate() {
 
     renderer.setRenderTarget(null);
     renderer.render(postScene, postCam);
-
 
     requestAnimationFrame(animate);
 }

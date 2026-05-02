@@ -7,16 +7,36 @@
 <body>
 <style>
     body { margin: 0; overflow: hidden; background: #000; }
+    #controls {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 14px;
+        border-radius: 10px;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 13px;
+        max-height: 95vh;
+        overflow-y: auto;
+        min-width: 240px;
+    }
 </style>
 <script type="importmap">
     {
         "imports": {
             "three": "https://unpkg.com/three@0.182.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.182.0/examples/jsm/"
+            "three/addons/": "https://unpkg.com/three@0.182.0/examples/jsm/",
+            "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm"
         }
     }
 </script>
 <script src="src/main.js" type="module"></script>
+<div id="controls">
+    <h3>Controls</h3>
+    <div id="gui-container"></div>
+</div>
 </body>
 </html>
 
