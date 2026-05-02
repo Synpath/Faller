@@ -3,10 +3,12 @@ import GUI from 'lil-gui';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {whaleShader, ironShader, basicBufferShader, causticsShader} from './shaders.js';
-import {furShader} from './shaders.js';
+import {furShader, abyssalFloor} from './shaders.js';
 import {LSystem} from './L-system.js';
 
+// --------------------------------------------------------------
 // GLOBAL SCENE VARIABLEs
+// --------------------------------------------------------------
 let scene, camera, controls, renderer;
 let postScene, renderTarget, postCam, postBuffGeom;
 let sun, sunWorldPos, floor, floorGeom, defaultFloor;
@@ -25,7 +27,8 @@ const MODES = {
     SHALLOWS: 'Shallow Water',
     ABYSSAL: 'Abyssal Zone',
 };
-let currentMode = MODES.SHALLOWS;
+let currentMode = MODES.ABYSSAL;
+// ------------------------------------------------------------
 
 function initScene() {
     // SCENE -----------
@@ -56,6 +59,7 @@ function initScene() {
     // Orbit Controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    controls.maxPolarAngle = 1.4963;
 
     // Axes Helper (remove or toggle off when done debugging)
     const axesHelper = new THREE.AxesHelper(30);
@@ -79,6 +83,10 @@ function initScene() {
     animate();
 
 } //initScene
+
+// ---------------------------------------------------------------------
+// HELPER FUNCTIONS
+// ---------------------------------------------------------------------
 
 function loadModel() {
     // Load model
@@ -168,6 +176,7 @@ function createFloor() {
     defaultFloor = floorMat;
     floor = new THREE.Mesh(floorGeom, floorMat);
     globalUniforms.u_Resolution.value = new THREE.Vector2(floorGeom.parameters.width, floorGeom.parameters.height);
+    abyssalFloor.uniforms.u_color.value = new THREE.Color(0x694637);
 
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 11;
@@ -190,7 +199,7 @@ function updateMode() {
 
     switch (currentMode) {
         case MODES.LUNG:
-            floor.material = defaultFloor;
+            floor.material = abyssalFloor;
             quads.lung.visible = true;
             whaleShader.uniforms.mode.value = 1;
             scene.background = new THREE.Color(0x1b2743);
@@ -198,14 +207,15 @@ function updateMode() {
 
         case MODES.SHALLOWS:
             quads.shallow.visible = true;
-
             floor.material = createCaustics(0x694637);
             scene.background = new THREE.Color(0x6b87bf);
             break;
 
         case MODES.ABYSSAL:
-            floor.material = defaultFloor;
-            whaleShader.uniforms.mode.value = 0;
+            scene.background = new THREE.Color(0x000000);
+            floor.material = abyssalFloor;
+            // floor.material.uniforms.u_color.value = new THREE.Color(0x694637);
+            whaleShader.uniforms.mode.value = 3;
             quads.abyssal.visible = true;
             break;
     }
@@ -222,7 +232,7 @@ function updateModel() {
                 child.material = whaleShader;
                 break;
             case MODES.SHALLOWS:
-                child.material = createCaustics(0xff00ff);
+                child.material = createCaustics(0xffefee);
                 break;
             case MODES.ABYSSAL:
                 child.material = whaleShader;
@@ -232,7 +242,6 @@ function updateModel() {
     });
 
     // set these uniforms here because they do basic shading
-    whaleShader.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
     whaleShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
 }
 
@@ -268,6 +277,9 @@ function createCaustics(color) {
     return mat;
 }
 
+// -----------------------------------------------------------------
+// ANIMATION LOOP
+// -----------------------------------------------------------------
 function animate() {
     const time = clock.getElapsedTime();
 
@@ -275,7 +287,11 @@ function animate() {
     causticsShader.uniforms.u_Time.value = time;
     globalUniforms.u_Time.value = time;
 
+
     controls.update();
+    sunWorldPos = new THREE.Vector3(camera.position.x, camera.position.y + 10, camera.position.z - 5);
+    whaleShader.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
+    abyssalFloor.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
 
     // 2-PASS RENDER PIPELINE TO ACCOMODATE POST-PROCESSING
     // 1. render to a target

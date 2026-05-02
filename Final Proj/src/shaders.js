@@ -8,6 +8,21 @@ import * as THREE from 'three';
 // causticsVertex: coordinates for caustics
 // causticsFrag: procedural caustics shader using Voronoi cellular noise
 
+const lightStruct = `
+    struct Light {
+        vec3 position;
+        vec3 lightDir;
+    
+        vec3 ambient;
+        vec3 diffuse;
+        vec3 specular;
+
+        float constant;
+        float linear;
+        float quadratic;        
+    };
+`;
+
 const whaleVertex = `
     varying vec3 vNormal;
     varying vec3 vViewPosition;
@@ -15,7 +30,6 @@ const whaleVertex = `
     void main() {
     
         vNormal = normalize(normalMatrix * normal);
-        
         vec4 viewPos = modelViewMatrix * vec4(position, 1.0); 
         vViewPosition = viewPos.xyz;
         vec4 projection = projectionMatrix * viewPos;
@@ -28,7 +42,7 @@ const whaleFrag = `
     varying vec3 vNormal;
     varying vec3 vViewPosition;
     
-    uniform vec3 lightPos;
+    uniform vec3 u_lightPos;
     uniform vec2 u_Resolution;
     uniform int mode;  //0: basic lighting, 1: iron lung, 2: shallows, 3: abyssal
     
@@ -39,55 +53,95 @@ const whaleFrag = `
     vec3 ambientColor = vec3(0.019, 0.23, 0.22);
     
     const float PI = 3.14159265359;
-    float ambientStrength = 0.35;
-    float diffuseStrength = 0.4;
+    float ambientStrength = 0.35; //0.35
+    float diffuseStrength = 0.7; 
     float specularStrength = 0.5;
     float shininess = 32.0;
     float contrast = 0.86; //0.9 i like this one
     
+    ${lightStruct}
+    
     float noise(vec2 uv) {
         return (fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 2.0 * 3.2;
+    }
+    
+    vec3 phong() {
+        Light basic = Light(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0), 0.0, 0.0, 0.0);
+    
+        vec3 normal = normalize(vNormal);
+        
+        // LIGHTING: DIFFUSE + AMBIENT
+        basic.ambient = ambientColor * ambientStrength;
+        
+        basic.lightDir = normalize(u_lightPos - vViewPosition);
+        basic.diffuse = max(dot(normal, basic.lightDir), 0.0) * diffuseStrength * lightColor;
+        
+        return (basic.ambient + basic.diffuse) * lightColor;
+    }
+    
+    vec3 point() {
+        Light basic = Light(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0), 1.0, 0.0, 0.0);
+        basic.position = u_lightPos;
+        basic.linear = 0.0014;
+        basic.quadratic = 0.0002;
+        basic.lightDir = normalize(u_lightPos - vViewPosition);
+        
+        float distance = length(basic.position - vViewPosition);
+        float scale = mode == 3 ? 0.8 : 1.0;
+        distance *= scale;
+        
+        float attenuation = 1.0 / (basic.constant + basic.linear * distance + basic.quadratic * (distance * distance));
+        vec3 normal = normalize(vNormal);
+        
+        // LIGHTING CALCULATIONS
+        basic.ambient = ambientColor * ambientStrength;
+        basic.diffuse = max(dot(normal, basic.lightDir), 0.0) * diffuseStrength * lightColor;
+        
+        basic.ambient *= attenuation;
+        basic.diffuse *= attenuation;
+        
+        return (basic.ambient + basic.diffuse);
     }
     
     void main() {
     
         vec2 uv = gl_FragCoord.xy / u_Resolution; // normalize uv coords
         vec3 normal = normalize(vNormal);
-        vec3 lightDir;
         vec3 viewDir;
         
-        vec3 ambient;
-        vec3 diffuse;
-        vec3 specular;
+        vec3 result = point();
         
-        // LIGHTING: DIFFUSE + AMBIENT
-        ambient = ambientColor * ambientStrength;
-        
-        lightDir = normalize(lightPos - vViewPosition);
-        diffuse = max(dot(normal, lightDir), 0.0) * diffuseStrength * lightColor;
-        
-        vec3 result = (ambient + diffuse) * lightColor;
+        // CONTRAST FILTER
+        float luminance = dot(result, weight); 
         
         if (mode == 1) { // ONLY APPLY DITHERING AND CONTRAST FOR IRON LUNG MODE
             // CONTRAST FILTER
-            float luminance = dot(result, weight);
-
             if (luminance < 0.0) {
                 result = result * (1.0 + luminance);
-            } else {
+             } else {
                 result = result + ((vec3(1.0) - result) * luminance);
-            }
-
-            result = (result - vec3(0.5)) * (tan((contrast + 1.0) * (PI / 4.0))) + vec3(0.5); // from "image editing" on wikipedia 
-        
+             }        
+            result = (result - vec3(0.5)) * (tan((contrast + 1.0) * (PI / 4.0))) + vec3(0.5); // from "image editing" on wikipedia
             luminance = dot(result, weight); // recompute luminance bc result changed
         
             // DITHERING
             luminance += noise(uv) * 2.2;
             result += vec3(luminance) * 0.3;
+        } else if (mode == 3) {
+              vec3 contrast;
+
+              if (luminance < 0.0) {
+                 contrast = result * (1.0 + luminance);
+              } else {
+                contrast = result + ((vec3(1.0) - result) * luminance);
+              }
+
+            contrast = (contrast - vec3(0.5)) * (tan((contrast + 1.0) * (PI / 4.0))) + vec3(0.5); // from "image editing" on wikipedia 
+            luminance = dot(contrast, weight);
+            result += vec3(luminance) * 0.3;
         }
         
-        gl_FragColor = vec4(result, 1.0);
+        gl_FragColor = vec4(result * lightColor, 1.0);
     }
 `;
 
@@ -176,16 +230,54 @@ const ironFrag = `
 
 const causticsVertex = `
     varying vec4 vWorldPosition;
-    varying float depth;
+    varying vec4 vViewPosition;
     varying vec4 projection;
+    varying vec3 vNormal;
     
     void main() {
         vWorldPosition = modelMatrix * vec4(position, 1.0); //model * local
-        
+        vViewPosition = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalize(normalMatrix * normal);
         projection = projectionMatrix * viewMatrix * vWorldPosition; // clip = proj * view * (model * local)
-        depth = projection.z;
         
         gl_Position = projection;
+    }
+`;
+
+const abyssalFrag = `
+    varying vec3 vNormal;
+    varying vec4 vViewPosition;
+    
+    uniform vec3 u_lightPos;
+    uniform vec3 u_color;
+    
+    // LIGHT
+    void main() {
+        const vec3 weight = vec3(0.2125, 0.7154, 0.0721);
+        const float PI = 3.14159265359;
+        vec3 lightColor = vec3(1.0, 1.0, 1.0);
+        vec3 ambientColor = u_color;
+        float ambientStrength = 0.35;
+        float diffuseStrength = 0.5;
+        float contrast = 0.86;
+        float constant = 1.0;
+        float linear = 0.0014;
+        float quadratic = 0.0002;
+        vec3 ambient;
+        vec3 diffuse;
+        vec3 lightDir = normalize(u_lightPos - vViewPosition.xyz);
+        vec3 normal = normalize(vNormal);
+        float distance = length(u_lightPos - vViewPosition.xyz);
+        float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+       
+        ambient = ambientColor * ambientStrength;
+        diffuse = max(dot(normal, lightDir), 0.0) * diffuseStrength * lightColor;
+        ambient *= attenuation;
+        diffuse *= attenuation;
+        
+        vec3 result = ambient + diffuse;
+        
+        gl_FragColor = vec4(result, 1.0); 
     }
 `;
 
@@ -377,5 +469,15 @@ const furShader = new THREE.ShaderMaterial({
     fragmentShader: furFrag,
 })
 
+const abyssalFloor = new THREE.ShaderMaterial({
+    uniforms: {
+        u_lightPos: {value: null},
+        u_color: {value: null}
+    },
+    vertexShader: causticsVertex,
+    fragmentShader: abyssalFrag,
+
+});
+
 export {whaleShader, ironShader, basicBufferShader, causticsShader}
-export {furShader}
+export {furShader, abyssalFloor}
