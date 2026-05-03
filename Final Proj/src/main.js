@@ -14,11 +14,17 @@ let postScene, renderTarget, postCam, postBuffGeom;
 let sun, sunWorldPos, floor, floorGeom, defaultFloor;
 let loader, root;
 let gui;
+
 let quads = {};
+let plants = [];
+let worms = [];
+
+let shells = [];
 
 const globalUniforms = {
     u_Time: {value: 0},
     u_Resolution: {value: null},
+    u_lightPos: {value: new THREE.Vector3()},
 };
 
 const clock = new THREE.Clock();
@@ -59,7 +65,7 @@ function initScene() {
     // Orbit Controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.maxPolarAngle = 1.4963;
+    // controls.maxPolarAngle = 1.4963;
 
     // Axes Helper (remove or toggle off when done debugging)
     const axesHelper = new THREE.AxesHelper(30);
@@ -131,42 +137,36 @@ function createLSystem() {
     scene.add(tree);
 }
 
-function createFur() {
+function createFur(color, x, y, z) {
     let radius = 4;
     let shellCount = 32;
     let shellGeom =[];
-    let shells = [];
-    let temp;
 
     furShader.uniforms.u_shellCount.value = shellCount;
+    furShader.uniforms.u_lightPos = globalUniforms.u_lightPos;
+    furShader.uniforms.u_color.value = new THREE.Color(color);
 
     for (let i = 0; i < shellCount; i++) {
         let sphereGeom = new THREE.SphereGeometry(radius + (0 * i)); //0.05
         shellGeom[i] = sphereGeom;
     }
-    temp = shellGeom[0];
 
     let baseMat = new THREE.MeshBasicMaterial({color: 0xff0000});
     shells[0] = new THREE.Mesh(shellGeom[0], baseMat);
 
-    temp = new THREE.Mesh(temp, baseMat);
-
-    let tempFur = new THREE.MeshBasicMaterial({color: 0x00ff00});
-
     for (let i = 0; i < shellCount; i++) {
         shells[i] = new THREE.Mesh(shellGeom[i], furShader.clone());
-        shells[i].renderOrder = i;
         shells[i].material.uniforms.u_shellIndex.value = i;
+        shells[i].material.renderOrder = i;
 
         if (i > 0) {
             shells[0].add(shells[i]);
         }
     }
 
-    temp.position.set(-10, 80, 40);
-    shells[0].position.set(-10, 80, 20);
+    shells[0].position.set(x, y, z);
+    // shells[0].position.set(-10, 80, 20);
     scene.add(shells[0]);
-    scene.add(temp);
 }
 
 function createFloor() {
@@ -214,8 +214,10 @@ function updateMode() {
         case MODES.ABYSSAL:
             scene.background = new THREE.Color(0x000000);
             floor.material = abyssalFloor;
-            // floor.material.uniforms.u_color.value = new THREE.Color(0x694637);
             whaleShader.uniforms.mode.value = 3;
+
+            createFur(0xfcba03, 33, 37, 10);
+
             quads.abyssal.visible = true;
             break;
     }
@@ -287,11 +289,15 @@ function animate() {
     causticsShader.uniforms.u_Time.value = time;
     globalUniforms.u_Time.value = time;
 
-
     controls.update();
     sunWorldPos = new THREE.Vector3(camera.position.x, camera.position.y + 10, camera.position.z - 5);
-    whaleShader.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
-    abyssalFloor.uniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
+    globalUniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
+    whaleShader.uniforms.u_lightPos = globalUniforms.u_lightPos;
+    abyssalFloor.uniforms.u_lightPos = globalUniforms.u_lightPos;
+
+    shells.forEach(s => {
+        // s.material.uniforms.u_lightPos.value =  sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
+    });
 
     // 2-PASS RENDER PIPELINE TO ACCOMODATE POST-PROCESSING
     // 1. render to a target
