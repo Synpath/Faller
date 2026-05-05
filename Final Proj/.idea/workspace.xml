@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="594da534-aa0f-409b-accb-dff822388647" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/.idea/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/Final Proj.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/.idea/Final Proj.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/README.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/README.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/js/L-system.js" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/js/L-system.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/js/low_poly_whale_bones/license.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/js/low_poly_whale_bones/license.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/js/low_poly_whale_bones/scene.bin" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/js/low_poly_whale_bones/scene.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/js/low_poly_whale_bones/scene.gltf" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/js/low_poly_whale_bones/scene.gltf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/js/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/js/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/code/js/shaders.js" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/code/js/shaders.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/report/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../FE-Leng-Jianing/report/README.md" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="HTML File" />
+        <option value="JavaScript File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="3C9Acst4EPaDfwx4igXTr06zOwY" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Lengj/OneDrive/Documents/GitHub/Faller/Final Proj&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;IntelliLang.Configuration&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Lengj\OneDrive\Documents\GitHub\Faller\Final Proj\code\js" />
+      <recent name="C:\Users\Lengj\OneDrive\Documents\GitHub\Faller\Final Proj\code" />
+      <recent name="C:\Users\Lengj\OneDrive\Documents\Final Proj\src" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-WS-253.30387.83" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="594da534-aa0f-409b-accb-dff822388647" name="Changes" comment="" />
+      <created>1775787495077</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1775787495077</updated>
+      <workItem from="1775787496623" duration="2311000" />
+      <workItem from="1775851307632" duration="15921000" />
+      <workItem from="1775917728332" duration="5631000" />
+      <workItem from="1775961571601" duration="11992000" />
+      <workItem from="1776003210302" duration="3210000" />
+      <workItem from="1776227014784" duration="3331000" />
+      <workItem from="1776282287533" duration="5718000" />
+      <workItem from="1776302745384" duration="4975000" />
+      <workItem from="1776311829711" duration="1491000" />
+      <workItem from="1776375197476" duration="662000" />
+      <workItem from="1776528148011" duration="325000" />
+      <workItem from="1776645188009" duration="8600000" />
+      <workItem from="1776734071234" duration="8520000" />
+      <workItem from="1776803208220" duration="9497000" />
+      <workItem from="1777349030609" duration="5471000" />
+      <workItem from="1777390657017" duration="5817000" />
+      <workItem from="1777581471206" duration="15333000" />
+      <workItem from="1777673178126" duration="14914000" />
+      <workItem from="1777731189126" duration="15042000" />
+      <workItem from="1777765419695" duration="15425000" />
+      <workItem from="1777834963160" duration="8029000" />
+      <workItem from="1777910330739" duration="606000" />
+      <workItem from="1777921877304" duration="9096000" />
+      <workItem from="1777935801389" duration="2118000" />
+      <workItem from="1777948752075" duration="10312000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
