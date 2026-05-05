@@ -3,44 +3,50 @@ import * as THREE from 'three'
 class LSystem {
 
     constructor(axiom)
-{
-    this.axiom = axiom;
-    this.currentSystem = "";
-    this.rules = new Map(); //KEy: Character, Value: String
-}
-
-addRule(id, rule)
-{
-    this.rules.set(id, rule);
-}
-
-produce(iterations)
-{
-
-    this.currentSystem = this.axiom;
-
-    for (let loop=1; loop <= iterations; loop++)
     {
-        let tempResult = "";
-
-        for (let charLoop=0; charLoop < this.currentSystem.length; charLoop++)
-        {
-            let nextChar = this.currentSystem.charAt(charLoop);
-            if (this.rules.has(nextChar))
-            {
-                tempResult += this.rules.get(nextChar);
-            }
-            else
-            {
-                tempResult+= nextChar;
-            }
-        }
-
-        this.currentSystem= tempResult;
+        this.axiom = axiom;
+        this.currentSystem = "";
+        this.rules = new Map(); //KEy: Character, Value: String
     }
-}
 
-    draw(length, angleInDegrees)
+    resetSystem(axiom) {
+        this.currentSystem = "";
+        this.rules = new Map();
+        this.axiom = axiom;
+    }
+
+    addRule(id, rule)
+    {
+        this.rules.set(id, rule);
+    }
+
+    produce(iterations)
+    {
+
+        this.currentSystem = this.axiom;
+
+        for (let i= 1; i <= iterations; i++)
+        {
+            let result = "";
+
+            for (let j= 0; j < this.currentSystem.length; j++)
+            {
+                let nextChar = this.currentSystem.charAt(j);
+                if (this.rules.has(nextChar))
+                {
+                    result += this.rules.get(nextChar);
+                }
+                else
+                {
+                    result += nextChar;
+                }
+            }
+
+            this.currentSystem = result;
+        }
+    }
+
+    draw(length, angleInDegrees, color)
     {
         let x = 0;
         let y = 0;
@@ -49,14 +55,12 @@ produce(iterations)
         const newShape = new THREE.Shape();
         const stack = [];
 
-        for (let charLoop=0; charLoop < this.currentSystem.length; charLoop++)
+        for (let i= 0; i < this.currentSystem.length; i++)
         {
-            let nextChar = this.currentSystem.charAt(charLoop);
+            let char = this.currentSystem.charAt(i);
 
-            //println("$" + nextChar );
-            switch (nextChar)
+            switch (char)
             {
-                case 'G': // fall thru
                 case 'F':
                     let newX = x + length * Math.cos(currentAngle);
                     let newY = y + length * Math.sin(currentAngle);
@@ -68,33 +72,29 @@ produce(iterations)
 
                 case '-':
                     currentAngle -= angle;
-                    //println("turn: " + (-angle));
                     break;
 
                 case '+':
                     currentAngle += angle;
-                    //println("turn: " + (+angle));
                     break;
                 case '[':
                     stack.push({x, y, currentAngle});
-                    //println("push");
                     break;
                 case ']':
                     const state = stack.pop();
                     x = state.x;
                     y = state.y;
                     currentAngle = state.currentAngle;
-                    //println("pop");
                     break;
 
                 default:
-                //print("?" + nextChar);
             }
-        } //for
-        const geometry = new THREE.ExtrudeGeometry(newShape);
-        const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const mesh = new THREE.Mesh(geometry, mat);
+        }
 
+        const geometry = new THREE.ExtrudeGeometry(newShape);
+        const mat = new THREE.MeshBasicMaterial({ color: color });
+        const mesh = new THREE.Mesh(geometry, mat);
+        mesh.rotation.y = Math.PI / 2;
         return mesh;
     }
 }

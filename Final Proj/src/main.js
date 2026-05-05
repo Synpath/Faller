@@ -3,7 +3,7 @@ import GUI from 'lil-gui';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {whaleShader, ironShader, basicBufferShader, causticsShader} from './shaders.js';
-import {furShader, abyssalFloor} from './shaders.js';
+import {furShader, abyssalFloor, rockShader} from './shaders.js';
 import {LSystem} from './L-system.js';
 
 // --------------------------------------------------------------
@@ -11,29 +11,27 @@ import {LSystem} from './L-system.js';
 // --------------------------------------------------------------
 let scene, camera, controls, renderer;
 let postScene, renderTarget, postCam, postBuffGeom;
-let sun, sunWorldPos, floor, floorGeom, defaultFloor;
+let sunWorldPos, floor, floorGeom;
 let loader, root;
 let gui;
+const clock = new THREE.Clock();
 
 let quads = {};
 let plants = [];
 let worms = [];
 
-let shells = [];
-
 const globalUniforms = {
     u_Time: {value: 0},
     u_Resolution: {value: null},
     u_lightPos: {value: new THREE.Vector3()},
+    mode: {value: 0},
 };
-
-const clock = new THREE.Clock();
 const MODES = {
     LUNG: 'Iron Lung',
     SHALLOWS: 'Shallow Water',
     ABYSSAL: 'Abyssal Zone',
 };
-let currentMode = MODES.ABYSSAL;
+let currentMode = MODES.LUNG;
 // ------------------------------------------------------------
 
 function initScene() {
@@ -65,11 +63,10 @@ function initScene() {
     // Orbit Controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    // controls.maxPolarAngle = 1.4963;
 
-    // Axes Helper (remove or toggle off when done debugging)
-    const axesHelper = new THREE.AxesHelper(30);
-    scene.add(axesHelper);
+    // Axes Helper (keep for now, X and Z are oriented weirdly with the whale skeleton so helpful to keep around)
+    // const axesHelper = new THREE.AxesHelper(30);
+    // scene.add(axesHelper);
 
     // Handle Resizing
     window.addEventListener('resize', () => {
@@ -79,10 +76,10 @@ function initScene() {
         renderTarget.setSize(window.innerWidth, window.innerHeight);
     });
 
-    createSun();
     createFloor();
     loadModel();
     initPost();
+    initExtra();
     setupGUI();
     updateMode();
 
@@ -90,10 +87,72 @@ function initScene() {
 
 } //initScene
 
+function initPost() {
+    quads.lung = new THREE.Mesh(postBuffGeom, ironShader);
+    quads.shallow = new THREE.Mesh(postBuffGeom, basicBufferShader);
+    quads.abyssal = new THREE.Mesh(postBuffGeom, basicBufferShader);
+
+    // pass in rendertarget texture
+    ironShader.uniforms.t_Diffuse.value = renderTarget.texture;
+    basicBufferShader.uniforms.t_Diffuse.value = renderTarget.texture;
+
+    ironShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+
+    Object.values(quads).forEach(v => {
+        v.visible = false;
+        postScene.add(v);
+    });
+}
+
+function initExtra() {
+    worms[0] = createFur(0xfce9b3, 33, 37, 10);
+    worms[1] = createFur(0x816b8f, 29, 30, -20);
+    worms[2] = createFur(0xa6877e, 56, 10, -8);
+    worms[3] = createFur(0xfca097, 56, 13, -60);
+
+    worms.forEach(s => {
+        s.shells.forEach(q => {
+            q.visible = false;
+        })
+    });
+
+    let system;
+
+    system = new LSystem("F");
+    system.addRule("F", "F[+F]F[-F]F");
+    plants[0] = createLSystem(system, 4, 0.6, 22.5, 10, 10, 26, 0xeb2f5e);
+
+    system.resetSystem("X");
+    system.addRule("F", "FF");
+    system.addRule("X", "F[+X]F[-X]+X");
+    plants[1] = createLSystem(system, 5, 0.4, 15.0, 40, 10, -38, 0xe67a27);
+
+    system.resetSystem("F");
+    system.addRule("F", "F+[-F]+F-F[-FF]F+F");
+    plants[2] = createLSystem(system, 4, 0.6, 65.0, 25, 15, -85, 0xbe46e0);
+
+    system.resetSystem("F");
+    system.addRule("F", "F+[+F]-F-F+FF[+F]");
+    plants[3] = createLSystem(system, 3, 0.3, 14.8, 36, 10, 80, 0x6d9e5a);
+
+    plants.forEach(p => {
+        p.visible = false;
+    })
+
+    let geometry = new THREE.DodecahedronGeometry(21);
+
+    rockShader.uniforms.u_color.value = new THREE.Color(0x8c817a);
+    rockShader.uniforms.u_lightPos = globalUniforms.u_lightPos;
+    rockShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+    rockShader.uniforms.mode = globalUniforms.mode;
+    const rock = new THREE.Mesh( geometry, rockShader );
+    scene.add( rock );
+    rock.position.set(27, 20, 60);
+}
+
 // ---------------------------------------------------------------------
 // HELPER FUNCTIONS
 // ---------------------------------------------------------------------
-
 function loadModel() {
     // Load model
     loader = new GLTFLoader();
@@ -115,26 +174,12 @@ function loadModel() {
     });
 }
 
-function createSun() {
-    const sunGeom = new THREE.SphereGeometry(2, 16, 16);
-    const sunMat = new THREE.MeshBasicMaterial({ color: '#ffd129'});
-    sun = new THREE.Mesh(sunGeom, sunMat);
-
-    // sun.position.set(50, 5, 10);
-    // sunWorldPos = new THREE.Vector3(50, 5, 10);
-    sun.position.set(0, 50, 10);
-    sunWorldPos = new THREE.Vector3(0, 50, 10);
-    scene.add(sun);
-}
-
-function createLSystem() {
-    let system;
-    system = new LSystem("F");
-    system.addRule("F", "F[+F]F[-F]F");
-    system.produce(4);
-    let tree = system.draw(0.6, 22.5);
-    tree.position.set(25, 10, 20);
+function createLSystem(system, iterations, length, angle, x, y, z, color) {
+    system.produce(iterations);
+    let tree = system.draw(length, angle, color);
+    tree.position.set(x, y, z);
     scene.add(tree);
+    return tree;
 }
 
 function createFur(color, x, y, z) {
@@ -142,38 +187,37 @@ function createFur(color, x, y, z) {
     let shellCount = 32;
     let shellGeom =[];
 
+    let fur = {
+        shells: [],
+    }
+
     furShader.uniforms.u_shellCount.value = shellCount;
     furShader.uniforms.u_lightPos = globalUniforms.u_lightPos;
     furShader.uniforms.u_color.value = new THREE.Color(color);
 
     for (let i = 0; i < shellCount; i++) {
-        let sphereGeom = new THREE.SphereGeometry(radius + (0 * i)); //0.05
+        let sphereGeom = new THREE.SphereGeometry(radius);
         shellGeom[i] = sphereGeom;
     }
 
-    let baseMat = new THREE.MeshBasicMaterial({color: 0xff0000});
-    shells[0] = new THREE.Mesh(shellGeom[0], baseMat);
-
     for (let i = 0; i < shellCount; i++) {
-        shells[i] = new THREE.Mesh(shellGeom[i], furShader.clone());
-        shells[i].material.uniforms.u_shellIndex.value = i;
-        shells[i].material.renderOrder = i;
+        fur.shells[i] = new THREE.Mesh(shellGeom[i], furShader.clone());
+        fur.shells[i].material.uniforms.u_shellIndex.value = i;
+        fur.shells[i].material.renderOrder = i;
 
         if (i > 0) {
-            shells[0].add(shells[i]);
+            fur.shells[0].add(fur.shells[i]);
         }
     }
 
-    shells[0].position.set(x, y, z);
-    // shells[0].position.set(-10, 80, 20);
-    scene.add(shells[0]);
+    fur.shells[0].position.set(x, y, z);
+    scene.add(fur.shells[0]);
+    return fur;
 }
 
 function createFloor() {
-    floorGeom = new THREE.PlaneGeometry(1000, 1000);
-    // let floorMat = new THREE.MeshBasicMaterial({color: '#aba79d', side: THREE.DoubleSide});
+    floorGeom = new THREE.PlaneGeometry(1000, 1000, 200, 200);
     let floorMat = new THREE.MeshBasicMaterial({ color: '#694637', side: THREE.DoubleSide});
-    defaultFloor = floorMat;
     floor = new THREE.Mesh(floorGeom, floorMat);
     globalUniforms.u_Resolution.value = new THREE.Vector2(floorGeom.parameters.width, floorGeom.parameters.height);
     abyssalFloor.uniforms.u_color.value = new THREE.Color(0x694637);
@@ -197,28 +241,51 @@ function setupGUI() {
 function updateMode() {
     Object.values(quads).forEach(q => q.visible = false);
 
+    worms.forEach(s => {
+        s.shells.forEach(q => {
+            q.visible = false;
+        })
+    });
+
+    plants.forEach(p => {
+        p.visible = false;
+    });
+
     switch (currentMode) {
         case MODES.LUNG:
-            floor.material = abyssalFloor;
-            quads.lung.visible = true;
-            whaleShader.uniforms.mode.value = 1;
             scene.background = new THREE.Color(0x1b2743);
+            quads.lung.visible = true;
+
+            floor.material = abyssalFloor;
+            globalUniforms.mode.value = 1;
             break;
 
         case MODES.SHALLOWS:
-            quads.shallow.visible = true;
-            floor.material = createCaustics(0x694637);
             scene.background = new THREE.Color(0x6b87bf);
+            quads.shallow.visible = true;
+
+            globalUniforms.mode.value = 2;
+            floor.material = createCaustics(0x694637);
+            plants.forEach(p => {
+                p.visible = true;
+            });
             break;
 
         case MODES.ABYSSAL:
-            scene.background = new THREE.Color(0x000000);
-            floor.material = abyssalFloor;
-            whaleShader.uniforms.mode.value = 3;
-
-            createFur(0xfcba03, 33, 37, 10);
-
+            scene.background = new THREE.Color(0x1a294d);
             quads.abyssal.visible = true;
+
+            floor.material = abyssalFloor;
+            floor.material.side = THREE.DoubleSide;
+            globalUniforms.mode.value = 3;
+            worms.forEach(s => {
+                s.shells.forEach(q => {
+                    q.visible = true;
+                })
+            });
+            plants.forEach(p => {
+                p.visible = true;
+            });
             break;
     }
 }
@@ -234,7 +301,7 @@ function updateModel() {
                 child.material = whaleShader;
                 break;
             case MODES.SHALLOWS:
-                child.material = createCaustics(0xffefee);
+                child.material = createCaustics(0xe3d7d1);
                 break;
             case MODES.ABYSSAL:
                 child.material = whaleShader;
@@ -245,23 +312,7 @@ function updateModel() {
 
     // set these uniforms here because they do basic shading
     whaleShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
-}
-
-function initPost() {
-    quads.lung = new THREE.Mesh(postBuffGeom, ironShader);
-    quads.shallow = new THREE.Mesh(postBuffGeom, basicBufferShader);
-    quads.abyssal = new THREE.Mesh(postBuffGeom, basicBufferShader);
-
-    // pass in rendertarget texture
-    ironShader.uniforms.t_Diffuse.value = renderTarget.texture;
-    basicBufferShader.uniforms.t_Diffuse.value = renderTarget.texture;
-
-    ironShader.uniforms.u_Resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
-
-    Object.values(quads).forEach(v => {
-        v.visible = false;
-        postScene.add(v);
-    });
+    whaleShader.uniforms.mode = globalUniforms.mode;
 }
 
 function createCaustics(color) {
@@ -294,10 +345,6 @@ function animate() {
     globalUniforms.u_lightPos.value = sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
     whaleShader.uniforms.u_lightPos = globalUniforms.u_lightPos;
     abyssalFloor.uniforms.u_lightPos = globalUniforms.u_lightPos;
-
-    shells.forEach(s => {
-        // s.material.uniforms.u_lightPos.value =  sunWorldPos.clone().applyMatrix4(camera.matrixWorldInverse);
-    });
 
     // 2-PASS RENDER PIPELINE TO ACCOMODATE POST-PROCESSING
     // 1. render to a target

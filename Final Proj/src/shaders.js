@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 
-// basicVertex: shared vertex shader
+// basicVertex: shared vertex shader since most of my shader effects don't mess with vertex positions
 // whaleFrag: point lighting and contrast on whale + dithering for iron lung mode
-// bufferVertex: get uv coords of the texture in the buffer we rendered to in the first pass
 // basicBufferFrag: displays the base scene as if rendered using 1 pass AKA no post-processing
 // ironFrag: post-processing effects for iron lung mode, treats the first render pass as a flat image and shades it accordingly
 // abyssalFrag: point lighting on the floor
 // causticsFrag: procedural caustics shader using Voronoi cellular noise
 // furVertex: special vertex shader that creates shells for shell texturing fur
 // furFrag: applies lighting to the "fur" in accordance with the layered structure
+// rockFrag: essentially a copy of whaleFrag, only done this way because I wanted dithering as well without the headache of switching color through uniforms,
+            // can be refactored out in the future most likely
 
 // ---------------------------------------------------
 // SHARED CODE BETWEEN SHADERS
@@ -73,14 +74,17 @@ const basicVertex = `
     varying vec3 vNormal;
     varying vec4 vViewPosition;
     varying vec4 vWorldPosition;
+    varying vec2 vUv;
     
     void main() {
-        vNormal = normalize(normalMatrix * normal);
-        vWorldPosition = modelMatrix * vec4(position, 1.0);
-        vViewPosition = modelViewMatrix * vec4(position, 1.0);
+        vec4 pos = vec4(position, 1.0);
+        
+        vWorldPosition = modelMatrix * pos;
+        vViewPosition = modelViewMatrix * pos;
+        vUv = uv;
         
         vec4 projection = projectionMatrix * vViewPosition;
-        
+        vNormal = normalize(normalMatrix * normal);
         gl_Position = projection;
     }
 `;
@@ -109,7 +113,7 @@ const whaleFrag = `
         vec2 uv = gl_FragCoord.xy / u_Resolution; // normalize uv coords
         vec3 viewDir;
         
-        float scale = mode == 3 ? 0.8 : 1.0;     
+        float scale = mode == 3 ? 0.8 : 1.0; // scaling the distance for the point light so it doesnt fade so fast     
         vec3 result = point(scale);
         
         // CONTRAST FILTER
@@ -118,16 +122,16 @@ const whaleFrag = `
         if (mode == 1) { // ONLY APPLY DITHERING AND CONTRAST FOR IRON LUNG MODE
             // CONTRAST FILTER
             if (luminance < 0.0) {
-                result = result * (1.0 + luminance);
+                result = result * (1.0 + luminance); //increase dark areas
              } else {
-                result = result + ((vec3(1.0) - result) * luminance);
+                result = result + ((vec3(1.0) - result) * luminance); 
              }        
-            result = (result - vec3(0.5)) * (tan((contrast + 1.0) * (PI / 4.0))) + vec3(0.5); // from "image editing" on wikipedia
-            luminance = dot(result, weight); // recompute luminance bc result changed
+            result = (result - vec3(0.5)) * (tan((contrast + 1.0) * (PI / 4.0))) + vec3(0.5); // from "image editing" on wikipedia, GIMP uses this formula
+            luminance = dot(result, weight); // recompute luminance bc result changed, this is to get proper gray-scale again
         
             // DITHERING
             luminance += noise(uv) * 2.2;
-        } else if (mode == 3) {
+        } else if (mode == 3) { //contrast and no dithering
               vec3 contrast;
 
               if (luminance < 0.0) {
@@ -145,22 +149,13 @@ const whaleFrag = `
     }
 `;
 
-const bufferVertex = `
-    varying vec2 vUv;
-    
-    void main() {
-        vUv = uv;
-        gl_Position = vec4(position, 1.0);
-    }
-`;
-
 const basicBufferFrag = `
     uniform sampler2D t_Diffuse;
     
     varying vec2 vUv;
     
     void main() {
-        vec3 color = texture2D(t_Diffuse, vUv).rgb;
+        vec3 color = texture2D(t_Diffuse, vUv).rgb; //get the texture in the buffer we rendered to in the first pass
         
         gl_FragColor = vec4(color, 1.0);
     }
@@ -191,7 +186,7 @@ const ironFrag = `
     
     vec3 scanLineIntensity(float uv, float resolution, float opacity)
     {
-        // float intensity = sin(uv * resolution * PI * 2.5); // 2.0 is the wavelength
+        // float intensity = sin(uv * resolution * PI * 2.5); // 2.5 is the wavelength
         float intensity = sin(uv * resolution * PI * 0.1);
 
         intensity = ((0.5 * intensity) + 0.5) * 0.9 + 0.1;
@@ -217,12 +212,12 @@ const ironFrag = `
 
         // CRT SCANLINE EFFECT + VIGNETTE
         color *= vignetteIntensity(vUv, u_Resolution, 0.6, vignetteRoundness);                
-        color /= scanLineIntensity(vUv.x, u_Resolution.x, 0.4); //0.2 is opacity
+        color /= scanLineIntensity(vUv.x, u_Resolution.x, 0.4); //0.4 is opacity, divide in order to turn the scanlines white
         
         // TINTING
         color.z *= 3.5;
         color.y *= 1.3;
-        color *= 1.5; //1.5?
+        color *= 1.5; //1.5?, brighten the whole image
         gl_FragColor = vec4(color, 1.0);
     }
 `;
@@ -260,7 +255,7 @@ const causticsFrag = `
     uniform vec3 u_ObjectColor;
     varying vec4 vWorldPosition;
 
-    vec2 random2(vec2 p) {
+    vec2 random2(vec2 p) { //return a random point
         return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453);
     }
     
@@ -299,7 +294,7 @@ const causticsFrag = `
     
     void main() {
         
-        vec2 st = vWorldPosition.xz / u_Resolution.xy;
+        vec2 st = vWorldPosition.xz / u_Resolution.xy; //xz to apply foreshortening to the caustics, otherwise looks perpendicular to the viewer
         vec3 color = u_ObjectColor;
         
         vec2 aberration = 0.01 * vec2(
@@ -309,6 +304,7 @@ const causticsFrag = `
         aberration.x = clamp(0.002, 0.015, aberration.x);
         aberration.y = clamp(0.002, 0.015, aberration.y);
         
+        // layered caustics
         float c1 = voronoiCaustic(st - aberration);
         
         vec2 st2 = st;
@@ -318,9 +314,8 @@ const causticsFrag = `
         float c3 = voronoiCaustic(st3);
                
         vec3 finalCaustic = vec3(c1, c2, c3);
-        vec3 waterTint = vec3(0.0, 0.4, 0.7);
-        
-        color += finalCaustic * (waterTint * 1.2);
+                
+        color += finalCaustic * 0.7;
        
         gl_FragColor = vec4(color, 1.0);
     }
@@ -334,6 +329,8 @@ const furVertex = `
     varying vec3 vNormal;
     varying vec4 vViewPosition;
     
+    ${miscConst}
+    
     void main() {
     
         vNormal = normalize(normalMatrix * normal);
@@ -342,8 +339,19 @@ const furVertex = `
         normShellHeight = u_shellIndex / u_shellCount;
         float height = pow(normShellHeight, 1.0);
 
-        pos.xyz += vNormal * 1.5 * height;
-        
+        pos.xz -= vNormal.xz * 1.5 * height;
+        pos.y += vNormal.y * 1.5 * height;
+        // pos.xyz += vNormal * 1.5 * height; //cartesian coords?
+
+        //convert to spherical? not sure if it looks better tbh
+        // float p = sqrt((pos.x * pos.x) + (pos.y * pos.y) + (pos.z * pos.z));
+        // float phi = acos(pos.y / p);
+        // float theta = asin(pos.x / (p * sin(phi))) * PI;
+        //
+        // pos.x = p * sin(phi) * sin(theta);
+        // pos.y = p * cos(phi);
+        // pos.z = p * sin(phi) * cos(theta); 
+
         vec4 worldPos = modelMatrix * pos; 
         vViewPosition = modelViewMatrix * pos;       
         vec4 projection = projectionMatrix * viewMatrix * worldPos;
@@ -370,7 +378,7 @@ const furFrag = `
     ${lightStruct}
     
     float hash(int n) {
-        // integer hash copied from Hugo Elias
+        // integer hash copied from Hugo Elias copied from Acerola
         n = (n << 13) ^ n;
         n = n * (n * n * int(15731u + 0x789221u)) + int(0x131258u);
         return float(n & int(0x7fffffu)) / float(0x7fffff);
@@ -409,8 +417,67 @@ const furFrag = `
     }
 `;
 
+const rockFrag = `
+    varying vec3 vNormal;
+    varying vec4 vViewPosition;
+    
+    uniform vec3 u_lightPos;
+    uniform vec2 u_Resolution;
+    uniform int mode;  //0: basic lighting, 1: iron lung, 2: shallows, 3: abyssal
+    
+    ${miscConst}
+    ${lightParams}
+    vec3 lightColor = vec3(1.0, 1.0, 1.0);
+    vec3 ambientColor = vec3(0.33, 0.30, 0.29);
+    ${lightStruct}
+    
+    float noise(vec2 uv) {
+        return (fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 2.0 * 3.2;
+    }
+    
+    void main() {
+    
+        vec2 uv = gl_FragCoord.xy / u_Resolution; // normalize uv coords
+        vec3 viewDir;
+        
+        float scale = mode == 3 ? 0.8 : 1.0;     
+        vec3 result = point(scale);
+        
+        // CONTRAST FILTER
+        float luminance = dot(result, weight); 
+        
+        if (mode == 1) { // ONLY APPLY DITHERING AND CONTRAST FOR IRON LUNG MODE
+            // CONTRAST FILTER
+            if (luminance < 0.0) {
+                result = result * (1.0 + luminance);
+             } else {
+                result = result + ((vec3(1.0) - result) * luminance);
+             }        
+            result = (result - vec3(0.5)) * (tan((contrast + 1.0) * (PI / 4.0))) + vec3(0.5); // from "image editing" on wikipedia
+            luminance = dot(result, weight); // recompute luminance bc result changed
+        
+            // DITHERING
+            luminance += noise(uv) * 2.8;
+        } else if (mode == 3) {
+              vec3 contrast;
+
+              if (luminance < 0.0) {
+                 contrast = result * (1.0 + luminance);
+              } else {
+                contrast = result + ((vec3(1.0) - result) * luminance);
+              }
+
+            contrast = (contrast - vec3(0.5)) * (tan((contrast + 1.0) * (PI / 4.0))) + vec3(0.5); // from "image editing" on wikipedia 
+            luminance = dot(contrast, weight);
+        }
+        result += vec3(luminance) * 0.3;
+        
+        gl_FragColor = vec4(result * lightColor, 1.0);
+    }
+`;
+
 // ---------------------------------------------------------------------------------------
-// SHADER FOR BASIC LIGHTING ON THE WHALE SKELETON + DITHERING/CONTRAST FOR IRON LUNG MODE
+// SHADER FOR LIGHTING ON THE WHALE SKELETON + DITHERING/CONTRAST FOR IRON LUNG MODE
 const whaleShader = new THREE.ShaderMaterial({
     uniforms: {
         u_lightPos: {value: new THREE.Vector3(50, 5, 10)},
@@ -428,7 +495,7 @@ const ironShader = new THREE.ShaderMaterial({
       u_Time: { value: 0 },
       u_Resolution: { value: new THREE.Vector2() },
     },
-    vertexShader: bufferVertex,
+    vertexShader: basicVertex,
     fragmentShader: ironFrag
 });
 
@@ -437,10 +504,11 @@ const basicBufferShader = new THREE.ShaderMaterial({
    uniforms: {
        t_Diffuse: { value: null},
    },
-    vertexShader: bufferVertex,
+    vertexShader: basicVertex,
     fragmentShader: basicBufferFrag
 });
 
+// SHADER TO ADD CAUSTICS EFFECT TO AN OBJECT
 const causticsShader = new THREE.ShaderMaterial({
     uniforms: {
         u_Resolution: { value: null },
@@ -451,6 +519,7 @@ const causticsShader = new THREE.ShaderMaterial({
     fragmentShader: causticsFrag
 })
 
+// SHADER TO RENDER SPHERES TO LOOK LIKE BALLS OF FUR USING SHELL TEXTURING
 const furShader = new THREE.ShaderMaterial({
     uniforms: {
         u_shellIndex: { value: 0.0 },
@@ -464,6 +533,7 @@ const furShader = new THREE.ShaderMaterial({
     transparent: true,
 })
 
+// SHADER FOR THE FLOOR IN IRON LUNG AND ABYSSAL MODES
 const abyssalFloor = new THREE.ShaderMaterial({
     uniforms: {
         u_lightPos: {value: null},
@@ -473,5 +543,17 @@ const abyssalFloor = new THREE.ShaderMaterial({
     fragmentShader: abyssalFrag,
 });
 
+// SHADER FOR THE ROCK IN ALL MODES (for now)
+const rockShader = new THREE.ShaderMaterial({
+    uniforms: {
+        u_lightPos: {value: new THREE.Vector3()},
+        u_color: {value: null},
+        u_Resolution: {value: new THREE.Vector2()},
+        mode: {value: 0},
+    },
+    vertexShader: basicVertex,
+    fragmentShader: rockFrag,
+})
+
 export {whaleShader, ironShader, basicBufferShader, causticsShader}
-export {furShader, abyssalFloor}
+export {furShader, abyssalFloor, rockShader}
