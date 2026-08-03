@@ -3,14 +3,14 @@
 **Name:** Jianing Leng   **MyID:** 811751178
 
 ### eLC Submission
-- [ ] All code files uploaded in code/ folder
-- [ ] Code runs without errors
+- [O] All code files uploaded in code/ folder
+- [O] Code runs without errors
 - [O] README.txt explains how to run your project
 
 ### Video Demo (3-5 min)
-- [ ] Unlisted video link provided in report/video_link.txt
-- [ ] Has voiceover explaining your work
-- [ ] Demonstrates key features of your project
+- [O] Unlisted video link provided in report/video_link.txt
+- [O] Has voiceover explaining your work
+- [O] Demonstrates key features of your project
 
 ### Report (1,200 words) in report/report.pdf
 - [O] Project description and graphics techniques used
@@ -29,8 +29,8 @@
 - [O] Self-evaluation showing points earned per criterion
 
 ### Piazza / eLC Post
-- [ ] Posted showcasing your final project
-- [ ] Includes brief description and key results/screenshots
+- [O] Posted showcasing your final project
+- [O] Includes brief description and key results/screenshots
 
 ### Presentation
 - [O] Prepared slides for 3-5 minute presentation
