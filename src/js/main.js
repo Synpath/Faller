@@ -156,7 +156,7 @@ function initExtra() {
 function loadModel() {
     // Load model
     loader = new GLTFLoader();
-    loader.load('./js/low_poly_whale_bones/scene.gltf', function(gltf) {
+    loader.load('src/assets/low_poly_whale_bones/scene.gltf', function(gltf) {
         root = gltf.scene;
         root.scale.multiplyScalar(0.3);
 
