@@ -2,18 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aac3b2e9-1fe6-4a95-afe7-fed822ebbb9b" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/README.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/js/L-system.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/js/L-system.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/js/low_poly_whale_bones/license.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/low_poly_whale_bones/license.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/js/low_poly_whale_bones/scene.bin" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/low_poly_whale_bones/scene.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/js/low_poly_whale_bones/scene.gltf" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/low_poly_whale_bones/scene.gltf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/js/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/js/main.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/code/js/shaders.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/js/shaders.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FE-Leng-Jianing/rubric/FE_rubric.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,7 +56,7 @@
       <updated>1785732291017</updated>
       <workItem from="1785732293671" duration="18000" />
       <workItem from="1785732333650" duration="99000" />
-      <workItem from="1785807006210" duration="2065000" />
+      <workItem from="1785807006210" duration="2320000" />
     </task>
     <servers />
   </component>
