@@ -9,9 +9,18 @@ distinct visual styles.
 2. Shallow Water
 3. Abyssal   
 
-The first style is inspired from x-ray photographs created for the movie, "Iron Lung". The second
-is meant to replicate the lighting effects present on objects located in shallow water close to the sun.
+The first style is inspired from x-ray photographs created for the movie, "Iron Lung".    
+<img src="https://github.com/Synpath/Faller/blob/main/images/lung1.jpg" width="30%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/lung2.jpg" width="45%" />
+
+
+The second is meant to replicate the lighting effects present on objects located in shallow water close to the sun.
+<img src="https://github.com/Synpath/Faller/blob/main/images/shallows1.jpg" width="40%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/shallows2.jpg" width="30%" />
+
 The third replicates the lighting of a deep sea environment where whale falls are typically located.   
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyss1.jpg" width="40%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyss2.jpg" width="35%" />
 
 This project allowed me to learn and explore various graphics-related techniques, including but not limited to:  
 - **Post Processing Shaders:** CRT Scanlines, Film Grain, Vignette, Dithering, Greyscale, Contrast
@@ -37,3 +46,27 @@ computer graphics field, however, I do have features I would like to implement w
 - Fixing a rendering issue with the shell textured fur balls
 - Adding noise to the mesh of the floor in order to mimic the random patterns in the sand on the ocean floor
 - Creating a shader that replicates the way light reflects and shines through foggy or cloudy water
+
+---
+### Progress Pictures
+Additional progress pictures can be found within the images folder
+
+#### Iron Lung
+<img src="https://github.com/Synpath/Faller/blob/main/images/lungProg1.png" width="35%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/lungProg3.png" width="35%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/lungProg6.png" width="35%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/lungProg7.png" width="35%" />
+
+#### Shallows
+<img src="https://github.com/Synpath/Faller/blob/main/images/shallowProg1.png" width="25%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/shallowProg2.png" width="35%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/shallowProg3.png" width="35%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/shallowProg6.png" width="35%" />
+
+#### Abyssal
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyssalProg1.png" width="35%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyssalProg3.png" width="35%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyssalProg5.png" width="30%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyssalProg7.png" width="30%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyssalProg9.png" width="30%" />
+<img src="https://github.com/Synpath/Faller/blob/main/images/abyssalProg10.png" width="35%" />
